@@ -4,7 +4,7 @@
  * offline para navegação básica. Os dados (produtos/torres) sempre buscam
  * a rede primeiro, pra loja nunca mostrar preço/estoque desatualizado.
  */
-const CACHE_NOME = "atelie3d-v2";
+const CACHE_NOME = "atelie3d-v3-vercel";
 const ARQUIVOS_CASCO = [
   "./",
   "./index.html",
@@ -36,6 +36,12 @@ self.addEventListener("activate", (evento) => {
 
 self.addEventListener("fetch", (evento) => {
   const url = new URL(evento.request.url);
+
+  // Nunca intercepta POSTs nem as funções do checkout.
+  if (evento.request.method !== "GET" || url.pathname.startsWith("/api/")) {
+    return;
+  }
+
   const ehDado = url.pathname.includes("/data/");
 
   if (ehDado) {

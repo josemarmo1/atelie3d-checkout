@@ -213,3 +213,30 @@ atelie3d-checkout/
 - [ ] Publicar no GitHub Pages e cadastrar a URL no Link Integrado
 - [ ] Gerar e imprimir o QR Code
 - [ ] (Futuro) Webhook pra confirmação automática de pagamento
+
+---
+
+## Publicação atual: Vercel (necessária para o checkout)
+
+A API da InfinitePay bloqueia chamadas diretas do navegador por CORS. Por isso,
+este projeto inclui duas funções gratuitas da Vercel em `api/`:
+
+- `api/checkout.js`: cria o link de pagamento;
+- `api/payment-check.js`: confirma o pagamento no retorno.
+
+### Publicar
+
+1. Envie estes arquivos para o repositório no GitHub.
+2. Entre na Vercel e escolha **Add New → Project**.
+3. Importe o repositório `atelie3d-checkout`.
+4. Não altere as configurações de build; clique em **Deploy**.
+5. Use a URL fornecida pela Vercel no QR Code, com `?torre=R01`.
+
+Exemplo:
+
+```text
+https://atelie3d-checkout.vercel.app/?torre=R01
+```
+
+O GitHub Pages pode continuar existindo, mas o checkout deve ser acessado pela
+URL da Vercel para que as funções em `/api` funcionem.

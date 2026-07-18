@@ -151,7 +151,7 @@
         // Se chegou aqui sem redirecionar, algo impediu a navegação —
         // mantemos o botão travado porque o redirect já deveria ter ocorrido.
       } catch (erro) {
-        UI.mostrarToast(els.toast, "Não foi possível abrir o pagamento. Tente novamente.");
+        UI.mostrarToast(els.toast, erro.message || "Não foi possível abrir o pagamento. Tente novamente.");
         els.btnIrParaPagamento.disabled = false;
         els.btnIrParaPagamento.textContent = "Ir para pagamento";
         console.error(erro);

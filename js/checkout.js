@@ -1,123 +1,93 @@
 /**
  * checkout.js
- * Integração com o Checkout Integrado da InfinitePay.
+ * Integração com o Checkout Integrado da InfinitePay (API oficial).
+ *
+ * Fluxo:
+ *  1. POST pra InfinitePay com os itens do pedido -> recebe um link único.
+ *  2. Redireciona o cliente pra esse link (Pix ou cartão, aprovação na hora).
+ *  3. Depois de pagar, a InfinitePay redireciona de volta pra `redirect_url`
+ *     acrescentando: receipt_url, order_nsu, slug, capture_method,
+ *     transaction_nsu — a obrigado.html já sabe ler isso.
+ *
+ * Endpoint oficial (visto direto na documentação dentro do app InfinitePay):
+ *   POST https://api.infinitepay.io/invoices/public/checkout/links
+ *
+ * Corpo da requisição:
+ *   { handle, items: [{quantity, price, description}], order_nsu, redirect_url }
+ *
+ * Resposta:
+ *   { "url": "https://checkout.infinitepay.com.br/sua_tag?lenc=codigo_unico" }
  */
 const Checkout = (() => {
-  "use strict";
 
-  const ENDPOINT_LINKS = "https://api.infinitepay.io/invoices/public/checkout/links";
-  const TIMEOUT_MS = 15000;
+  const ENDPOINT_LINKS = "/api/checkout";
 
   function gerarOrderNsu(codigoTorre) {
     return `${codigoTorre}-${Date.now()}`;
   }
 
-  function montarRedirectUrl({ quantidade, totalValor, handle }) {
-    const url = new URL(CONFIG.redirectUrl, window.location.href);
-    url.searchParams.set("qtd", String(quantidade));
-    url.searchParams.set("total", totalValor.toFixed(2));
-    url.searchParams.set("handle", handle);
-    return url.toString();
-  }
-
-  async function fetchComTimeout(url, opcoes, tempoLimite = TIMEOUT_MS) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), tempoLimite);
-
-    try {
-      return await fetch(url, {
-        ...opcoes,
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  async function lerResposta(resposta) {
-    const texto = await resposta.text();
-    if (!texto) return {};
-
-    try {
-      return JSON.parse(texto);
-    } catch (_) {
-      return { mensagem: texto };
-    }
+  function montarRedirectUrl(quantidade, totalValor, torreAtualHandle) {
+    const params = new URLSearchParams();
+    params.set("qtd", quantidade);
+    params.set("total", totalValor.toFixed(2));
+    params.set("handle", torreAtualHandle);
+    const separador = CONFIG.redirectUrl.includes("?") ? "&" : "?";
+    return `${CONFIG.redirectUrl}${separador}${params.toString()}`;
   }
 
   /**
-   * Gera um link de pagamento da InfinitePay.
-   * @param {Object} torre objeto contendo codigo e handle
-   * @param {Object} produto objeto contendo nome e preco em reais
-   * @param {number} quantidade quantidade do produto
-   * @returns {Promise<string>} URL do checkout
+   * Pede pra InfinitePay gerar o link de pagamento deste pedido.
+   * @param {Object} torre - objeto da torre atual (precisa de `handle`)
+   * @param {Object} produto - { nome, preco }
+   * @param {number} quantidade
+   * @returns {Promise<string>} URL do checkout pronta pra redirecionar
    */
   async function gerarLinkPagamento(torre, produto, quantidade) {
-    if (!torre || typeof torre.handle !== "string" || !torre.handle.trim()) {
-      throw new Error("InfiniteTag não configurada para este ponto de venda.");
+    if (!torre || !torre.handle) {
+      throw new Error("Torre sem 'handle' da InfinitePay configurado.");
     }
-
-    if (!produto || typeof produto.preco !== "number" || produto.preco <= 0) {
-      throw new Error("Produto ou preço inválido.");
-    }
-
-    if (!Number.isInteger(quantidade) || quantidade < 1) {
+    if (!quantidade || quantidade < 1) {
       throw new Error("Quantidade inválida.");
     }
 
-    const handle = torre.handle.trim().replace(/^\$/, "");
     const totalValor = produto.preco * quantidade;
-    const orderNsu = gerarOrderNsu(torre.codigo || "PEDIDO");
 
     const corpo = {
-      handle,
-      order_nsu: orderNsu,
-      redirect_url: montarRedirectUrl({ quantidade, totalValor, handle }),
+      handle: torre.handle,
+      order_nsu: gerarOrderNsu(torre.codigo),
+      redirect_url: montarRedirectUrl(quantidade, totalValor, torre.handle),
       items: [
         {
           quantity: quantidade,
-          price: Math.round(produto.preco * 100),
+          price: Math.round(produto.preco * 100), // reais -> centavos
           description: produto.nome,
         },
       ],
     };
 
-    let resposta;
-    try {
-      resposta = await fetchComTimeout(ENDPOINT_LINKS, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(corpo),
-      });
-    } catch (erro) {
-      if (erro.name === "AbortError") {
-        throw new Error("A InfinitePay demorou para responder. Tente novamente.");
-      }
-      throw new Error("Não foi possível conectar à InfinitePay. Verifique sua internet.");
-    }
+    const resposta = await fetch(ENDPOINT_LINKS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
 
-    const dados = await lerResposta(resposta);
+    const dados = await resposta.json().catch(() => ({}));
 
     if (!resposta.ok) {
-      const detalhe = dados.message || dados.error || dados.mensagem;
-      throw new Error(
-        detalhe || `InfinitePay recusou a solicitação (status ${resposta.status}).`
-      );
+      throw new Error(dados.error || `InfinitePay recusou a requisição (status ${resposta.status}).`);
     }
 
-    if (!dados || typeof dados.url !== "string" || !dados.url.startsWith("https://")) {
-      throw new Error("A InfinitePay não retornou um link de pagamento válido.");
+    if (!dados || !dados.url) {
+      throw new Error("Resposta da InfinitePay veio sem o link de pagamento.");
     }
 
     return dados.url;
   }
 
+  /** Gera o link e redireciona o navegador pro checkout da InfinitePay */
   async function irParaPagamento(torre, produto, quantidade) {
     const url = await gerarLinkPagamento(torre, produto, quantidade);
-    window.location.assign(url);
+    window.location.href = url;
   }
 
   return { gerarLinkPagamento, irParaPagamento, gerarOrderNsu };

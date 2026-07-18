@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ateliê 3D — Chaveiro Ateliê Indaiá 3D</title>
+  <meta name="description" content="Chaveiro impresso em 3D pela Ateliê 3D, Indaiatuba/SP. Escolha a quantidade e pague na hora." />
+  <meta name="theme-color" content="#7B4DCC" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===================== CABEÇALHO ===================== -->
+  <header class="topo">
+    <div class="topo__conteudo">
+      <div class="topo__marca">
+        <img class="topo__logo" src="assets/logo/logo.png" alt="Logo Ateliê 3D"
+             onerror="this.style.display='none'" />
+        <div>
+          <div class="topo__nome" id="nomeLoja">Ateliê 3D</div>
+          <div class="topo__subtitulo" id="subtituloLoja">Bem-vindo(a)! Escolha seus chaveiros 3D 💜</div>
+        </div>
+      </div>
+
+      <div class="topo__torre" id="badgeTorre">
+        📍 <span id="nomeTorre">Carregando torre…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== PRODUTO ÚNICO ===================== -->
+  <main class="main-single">
+    <section class="produto-unico" id="produtoUnico" aria-live="polite">
+      <div class="produto-unico__skeleton skeleton"></div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    Feito com carinho pela Ateliê 3D · Indaiatuba/SP<br />
+    Dúvidas? <a id="linkWhatsapp" href="#" target="_blank" rel="noopener">Fale no WhatsApp</a>
+  </footer>
+
+  <!-- ===================== BARRA INFERIOR FIXA ===================== -->
+  <div class="cart-bar" id="cartBar">
+    <div class="cart-bar__inner">
+      <div class="cart-bar__info">
+        <div style="position: relative;">
+          <div class="cart-bar__icone">🔑</div>
+          <div class="cart-bar__qtd-badge" id="cartQtdBadge">0</div>
+        </div>
+        <div class="cart-bar__textos">
+          <span class="cart-bar__label" id="cartLabel">0 chaveiros</span>
+          <span class="cart-bar__total" id="cartTotal">R$ 0,00</span>
+        </div>
+      </div>
+      <button class="cart-bar__btn" id="btnFinalizarCompra">Finalizar compra</button>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: CONFIRMAÇÃO ===================== -->
+  <div class="overlay" id="overlayConfirmacao">
+    <div class="modal">
+      <div class="modal__alca"></div>
+      <div class="modal__cabecalho">
+        <span class="modal__titulo">Confirmar pedido</span>
+        <button class="modal__fechar" id="btnFecharConfirmacao" aria-label="Fechar">✕</button>
+      </div>
+      <div class="modal__lista">
+        <p style="font-size: 13.5px; color: var(--texto-suave); line-height: 1.5; padding: 8px 0 4px;">
+          Confira o pedido abaixo. Ao confirmar, você será levado para o
+          pagamento seguro da InfinitePay (Pix ou cartão de crédito em até 12x — aprovação na hora).
+        </p>
+        <div id="resumoConfirmacao"></div>
+      </div>
+      <div class="modal__rodape">
+        <div class="modal__linha-total">
+          <span>Total a pagar</span>
+          <span id="totalConfirmacao">R$ 0,00</span>
+        </div>
+        <button class="btn-primario" id="btnIrParaPagamento">Ir para pagamento</button>
+        <button class="btn-secundario" id="btnVoltarResumo">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/checkout.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

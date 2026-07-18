@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compra confirmada — Ateliê 3D</title>
+  <meta name="theme-color" content="#7B4DCC" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;">
+    <div style="text-align: center; max-width: 380px;">
+      <div style="font-size: 60px; margin-bottom: 10px;">✅</div>
+      <h1 style="font-family: var(--fonte-display); font-size: 23px; margin-bottom: 6px;">
+        Compra confirmada!
+      </h1>
+      <p id="resumoPedido" style="color: var(--roxo-escuro); font-weight: 700; font-size: 15px; margin-bottom: 4px;"></p>
+      <p id="formaPagamento" style="color: var(--texto-suave); font-size: 12.5px; margin-bottom: 14px;"></p>
+      <p style="color: var(--texto-suave); font-size: 14px; line-height: 1.6; margin-bottom: 22px;">
+        🔑 <strong style="color: var(--texto);">Retire seus chaveiros</strong> no balcão da Ateliê 3D.
+        Qualquer dúvida, chama no WhatsApp!
+      </p>
+      <a class="btn-primario" style="display: inline-block; text-decoration: none; margin-bottom: 10px;" href="index.html">
+        Voltar para a loja
+      </a>
+      <a id="linkComprovante" class="btn-secundario" style="display: none; text-decoration: none;" href="#" target="_blank" rel="noopener">
+        Ver comprovante de pagamento
+      </a>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+
+      // Nossos próprios parâmetros (adicionados pelo checkout.js antes de
+      // mandar o cliente pra InfinitePay)
+      const qtd = parseInt(params.get("qtd"), 10);
+      const total = parseFloat(params.get("total"));
+
+      // Parâmetros que a própria InfinitePay acrescenta ao redirecionar de volta
+      const receiptUrl = params.get("receipt_url");
+      const captureMethod = params.get("capture_method"); // "pix" ou "credit_card"
+
+      const elResumo = document.getElementById("resumoPedido");
+      const elForma = document.getElementById("formaPagamento");
+      const elComprovante = document.getElementById("linkComprovante");
+
+      if (qtd && !isNaN(total)) {
+        const totalFormatado = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        elResumo.textContent = `${qtd} chaveiro${qtd === 1 ? "" : "s"} · ${totalFormatado}`;
+      } else {
+        elResumo.remove();
+      }
+
+      if (captureMethod) {
+        const nomes = { pix: "Pago via Pix", credit_card: "Pago no cartão de crédito" };
+        elForma.textContent = nomes[captureMethod] || "";
+      } else {
+        elForma.remove();
+      }
+
+      if (receiptUrl) {
+        elComprovante.href = receiptUrl;
+        elComprovante.style.display = "inline-block";
+      }
+    })();
+  </script>
+</body>
+</html>

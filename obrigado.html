@@ -31,39 +31,129 @@
 
   <script>
     (function () {
+      "use strict";
+
+      const ENDPOINT_PAYMENT_CHECK =
+        "https://api.infinitepay.io/invoices/public/checkout/payment_check";
       const params = new URLSearchParams(window.location.search);
 
-      // Nossos próprios parâmetros (adicionados pelo checkout.js antes de
-      // mandar o cliente pra InfinitePay)
-      const qtd = parseInt(params.get("qtd"), 10);
-      const total = parseFloat(params.get("total"));
-
-      // Parâmetros que a própria InfinitePay acrescenta ao redirecionar de volta
+      const qtd = Number.parseInt(params.get("qtd"), 10);
+      const total = Number.parseFloat(params.get("total"));
+      const handle = (params.get("handle") || "").replace(/^\$/, "");
       const receiptUrl = params.get("receipt_url");
-      const captureMethod = params.get("capture_method"); // "pix" ou "credit_card"
+      const captureMethod = params.get("capture_method");
+      const orderNsu = params.get("order_nsu");
+      const transactionNsu = params.get("transaction_nsu");
+      const slug = params.get("slug");
 
+      const icone = document.querySelector("body > div > div > div");
+      const titulo = document.querySelector("h1");
       const elResumo = document.getElementById("resumoPedido");
       const elForma = document.getElementById("formaPagamento");
       const elComprovante = document.getElementById("linkComprovante");
+      const textoRetirada = titulo.parentElement.querySelectorAll("p")[2];
 
-      if (qtd && !isNaN(total)) {
-        const totalFormatado = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-        elResumo.textContent = `${qtd} chaveiro${qtd === 1 ? "" : "s"} · ${totalFormatado}`;
-      } else {
-        elResumo.remove();
+      function preencherDetalhes() {
+        if (qtd > 0 && Number.isFinite(total)) {
+          const totalFormatado = total.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          });
+          elResumo.textContent = `${qtd} chaveiro${qtd === 1 ? "" : "s"} · ${totalFormatado}`;
+        } else {
+          elResumo.textContent = "";
+        }
+
+        const formas = {
+          pix: "Pago via Pix",
+          credit_card: "Pago no cartão de crédito",
+        };
+        elForma.textContent = formas[captureMethod] || "";
+
+        if (receiptUrl) {
+          try {
+            const comprovante = new URL(receiptUrl);
+            if (comprovante.protocol === "https:") {
+              elComprovante.href = comprovante.toString();
+              elComprovante.style.display = "inline-block";
+            }
+          } catch (_) {
+            elComprovante.style.display = "none";
+          }
+        }
       }
 
-      if (captureMethod) {
-        const nomes = { pix: "Pago via Pix", credit_card: "Pago no cartão de crédito" };
-        elForma.textContent = nomes[captureMethod] || "";
-      } else {
-        elForma.remove();
+      function mostrarConfirmado() {
+        document.title = "Compra confirmada — Ateliê 3D";
+        icone.textContent = "✅";
+        titulo.textContent = "Compra confirmada!";
+        textoRetirada.innerHTML =
+          '🔑 <strong style="color: var(--texto);">Retire seus chaveiros</strong> no balcão da Ateliê 3D. Qualquer dúvida, chama no WhatsApp!';
       }
 
-      if (receiptUrl) {
-        elComprovante.href = receiptUrl;
-        elComprovante.style.display = "inline-block";
+      function mostrarVerificando() {
+        document.title = "Confirmando pagamento — Ateliê 3D";
+        icone.textContent = "⏳";
+        titulo.textContent = "Confirmando pagamento…";
+        textoRetirada.textContent = "Aguarde enquanto verificamos a confirmação da InfinitePay.";
       }
+
+      function mostrarNaoConfirmado() {
+        document.title = "Pagamento não confirmado — Ateliê 3D";
+        icone.textContent = "⚠️";
+        titulo.textContent = "Pagamento ainda não confirmado";
+        textoRetirada.textContent =
+          "Não retire o pedido ainda. Aguarde alguns instantes e recarregue esta página ou apresente o comprovante ao atendente.";
+      }
+
+      async function confirmarPagamento() {
+        if (!handle || !orderNsu || !transactionNsu || !slug) {
+          mostrarNaoConfirmado();
+          return;
+        }
+
+        mostrarVerificando();
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
+        try {
+          const resposta = await fetch(ENDPOINT_PAYMENT_CHECK, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              handle,
+              order_nsu: orderNsu,
+              transaction_nsu: transactionNsu,
+              slug,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!resposta.ok) {
+            mostrarNaoConfirmado();
+            return;
+          }
+
+          const dados = await resposta.json();
+          if (dados && dados.success === true && dados.paid === true) {
+            mostrarConfirmado();
+          } else {
+            mostrarNaoConfirmado();
+          }
+        } catch (erro) {
+          console.error("Falha ao confirmar pagamento:", erro);
+          mostrarNaoConfirmado();
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      preencherDetalhes();
+      confirmarPagamento();
     })();
   </script>
 </body>

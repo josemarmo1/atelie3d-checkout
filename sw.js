@@ -4,7 +4,7 @@
  * offline para navegação básica. Os dados (produtos/torres) sempre buscam
  * a rede primeiro, pra loja nunca mostrar preço/estoque desatualizado.
  */
-const CACHE_NOME = "atelie3d-v1";
+const CACHE_NOME = "atelie3d-v2";
 const ARQUIVOS_CASCO = [
   "./",
   "./index.html",
